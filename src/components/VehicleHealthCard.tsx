@@ -40,7 +40,7 @@ export function VehicleHealthCard({ vehicle }: VehicleHealthCardProps) {
         <h3>{vehicle.vehicleId}</h3>
         <span
           className="health-badge"
-          style={{ backgroundColor: health.color }}
+          style={{ borderLeftColor: health.color }}
         >
           {health.label}
         </span>

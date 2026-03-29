@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import "./App.css";
 import {
   getVehicles,
@@ -197,12 +197,12 @@ function App() {
                     <td>{vehicle.year}</td>
                     <td>{vehicle.mileage.toLocaleString()} mi</td>
                     <td>
-                      {useMemo(() => {
+                      {(() => {
                         const days = getDaysSinceLastService(vehicle.vehicleId);
                         if (days === null) return <span className="days-na">N/A</span>;
                         if (days > 90) return <span className="days-overdue">{days} days ⚠️</span>;
                         return <span>{days} days</span>;
-                      }, [vehicle.vehicleId])}
+                      })()}
                     </td>
                     <td>
                       <span
