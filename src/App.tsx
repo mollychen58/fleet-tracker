@@ -1,40 +1,26 @@
 import { useState } from "react";
 import "./App.css";
-
-/**
- * =============================================================================
- * FLEET MAINTENANCE TRACKER — STARTER SHELL
- * =============================================================================
- *
- * YOUR TASKS:
- *
- * Phase 1: Layout & Data Display
- *   1. Build a Vehicle table using getVehicles()
- *   2. Add summary metric cards using getFleetMetrics()
- *   3. Add a status filter dropdown
- *
- * Phase 2: Selection & Linked Data
- *   4. Click a row → show detail panel with linked Driver & MaintenanceRecords
- *   5. Compute and display "Days Since Last Service" with a warning if > 90
- *
- * Phase 3: Actions & Mutations
- *   6. Add a "Schedule Maintenance" form (calls scheduleMaintenance())
- *   7. Add a "Update Status" control (calls updateVehicleStatus())
- *   8. Add validation feedback
- *
- * Phase 4: Stretch Goals
- *   9.  Extract a reusable <VehicleHealthCard /> component
- *   10. Add a computed "Days Since Last Service" column to the main table
- *   11. Add a search bar using searchVehicles()
- *
- * HINTS:
- * - Import functions from "../services/ontologyService"
- * - Check CONCEPTS.md to understand how your code maps to Foundry
- * - Start with Phase 1 and work your way through
- * =============================================================================
- */
+import { getVehicles, getFleetMetrics } from "./services/ontologyService";
+import { VehicleStatus } from "./types";
 
 function App() {
+  const [statusFilter, setStatusFilter] = useState<VehicleStatus | "All">("All");
+
+  const vehicles = statusFilter === "All"
+    ? getVehicles()
+    : getVehicles({ status: statusFilter });
+
+  const metrics = getFleetMetrics();
+
+  const getStatusColor = (status: VehicleStatus): string => {
+    switch (status) {
+      case "Active": return "#22c55e";
+      case "Out of Service": return "#eab308";
+      case "Retired": return "#ef4444";
+      default: return "#94a3b8";
+    }
+  };
+
   return (
     <div className="app">
       <header className="app-header">
@@ -45,29 +31,71 @@ function App() {
       </header>
 
       <main className="app-main">
-        {/* 
-          PHASE 1: Start here!
-          
-          TODO: Add <MetricCards /> component
-          TODO: Add <FilterBar /> component
-          TODO: Add <VehicleTable /> component
-        */}
-        <div className="placeholder-card">
-          <h2>👋 Getting Started</h2>
-          <p>
-            Open <code>src/App.tsx</code> and start building! Check{" "}
-            <code>INSTRUCTIONS.md</code> for your task list.
-          </p>
-          <p>
-            Import data from <code>src/services/ontologyService.ts</code> to get started.
-          </p>
+        {/* Metric Cards */}
+        <div className="metric-cards">
+          <div className="metric-card">
+            <div className="metric-label">Total Vehicles</div>
+            <div className="metric-value">{metrics.totalVehicles}</div>
+          </div>
+          <div className="metric-card">
+            <div className="metric-label">Active Vehicles</div>
+            <div className="metric-value">{metrics.activeVehicles}</div>
+          </div>
+          <div className="metric-card">
+            <div className="metric-label">Total Maintenance Cost</div>
+            <div className="metric-value">${metrics.totalMaintenanceCost.toLocaleString()}</div>
+          </div>
         </div>
 
-        {/*
-          PHASE 2: Add detail panel here
-          
-          TODO: Add <VehicleDetailPanel /> component (shown when a vehicle is selected)
-        */}
+        {/* Filter Bar */}
+        <div className="filter-bar">
+          <label htmlFor="status-filter">Filter by Status:</label>
+          <select
+            id="status-filter"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as VehicleStatus | "All")}
+          >
+            <option value="All">All</option>
+            <option value="Active">Active</option>
+            <option value="Out of Service">Out of Service</option>
+            <option value="Retired">Retired</option>
+          </select>
+        </div>
+
+        {/* Vehicle Table */}
+        <div className="vehicle-table-container">
+          <table className="vehicle-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Make</th>
+                <th>Model</th>
+                <th>Year</th>
+                <th>Mileage</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {vehicles.map((vehicle) => (
+                <tr key={vehicle.vehicleId}>
+                  <td>{vehicle.vehicleId}</td>
+                  <td>{vehicle.make}</td>
+                  <td>{vehicle.model}</td>
+                  <td>{vehicle.year}</td>
+                  <td>{vehicle.mileage.toLocaleString()} mi</td>
+                  <td>
+                    <span
+                      className="status-badge"
+                      style={{ backgroundColor: getStatusColor(vehicle.status) }}
+                    >
+                      {vehicle.status}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </main>
     </div>
   );
