@@ -281,3 +281,44 @@
   flex: 1;
   max-width: 300px;
 }
+
+/* --- Action Section --- */
+.action-section {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 16px;
+  background: #f8fafc;
+  border-radius: 8px;
+}
+
+.action-section label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.action-section select {
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  background: white;
+}
+
+.maintenance-section {
+  margin-top: 24px;
+}
+
+/* --- Inline Detail Panel --- */
+.detail-row {
+  background: #f8fafc;
+}
+
+.detail-panel-inline {
+  padding: 24px;
+  background: white;
+  border-radius: 8px;
+  margin: 8px;
+}

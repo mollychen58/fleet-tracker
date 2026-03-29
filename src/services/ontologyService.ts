@@ -1,7 +1,7 @@
 // =============================================================================
 // ONTOLOGY SERVICE
-// This module simulates an Ontology SDK (OSDK). In a real Foundry application,
-// you would import from @osdk/client and query live Ontology data.
+// This module simulates an Ontology SDK (SDKS). In a real Foundry application,
+// you would import from @code/client and query live Ontology data.
 //
 // KEY CONCEPTS:
 // - getVehicles()                → Fetching an Object Set (with optional filters)
@@ -22,7 +22,7 @@ import {
   Driver,
   ScheduleMaintenanceParams,
   UpdateVehicleStatusParams,
-} from "../types";
+} from "@/types";
 
 // ---------------------------------------------------------------------------
 // In-memory store (simulates a live database)
@@ -63,8 +63,7 @@ export function searchVehicles(query: string): Vehicle[] {
   return vehicleStore.filter((v) => {
     if (v.vehicleId.toLowerCase().includes(lowerQuery)) return true;
     const driver = getDriverForVehicle(v.vehicleId);
-    if (driver && driver.fullName.toLowerCase().includes(lowerQuery)) return true;
-    return false;
+    return !!(driver && driver.fullName.toLowerCase().includes(lowerQuery));
   });
 }
 
@@ -101,12 +100,20 @@ export function getDriverForVehicle(vehicleId: string): Driver | undefined {
  * Calculate days since the vehicle's last maintenance.
  * In Foundry, this would be a Function-backed column — a server-side function
  * that computes a derived value for each object on the fly.
+ * Only considers past maintenance dates (scheduled future maintenance doesn't count).
  */
 export function getDaysSinceLastService(vehicleId: string): number | null {
   const records = getMaintenanceForVehicle(vehicleId);
   if (records.length === 0) return null;
-  const lastDate = new Date(records[0].serviceDate);
+
+  // Filter to only past service dates
   const today = new Date();
+  const pastRecords = records.filter(r => new Date(r.serviceDate) <= today);
+
+  if (pastRecords.length === 0) return null;
+
+  // @ts-ignore
+  const lastDate = new Date(pastRecords[0].serviceDate);
   const diffMs = today.getTime() - lastDate.getTime();
   return Math.floor(diffMs / (1000 * 60 * 60 * 24));
 }
@@ -206,6 +213,7 @@ export function updateVehicleStatus(
   }
 
   // --- Validation ---
+  // @ts-ignore
   const currentStatus = vehicleStore[index].status;
   if (currentStatus === "Retired" && params.newStatus !== "Retired") {
     return { success: false, error: "Cannot reactivate a retired vehicle." };
