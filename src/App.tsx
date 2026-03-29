@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import "./App.css";
 import {
   getVehicles,
@@ -13,6 +13,9 @@ import {
 } from "./services/ontologyService";
 import { VehicleStatus } from "./types";
 import { VehicleHealthCard } from "./components/VehicleHealthCard";
+import { MetricCards } from "./components/MetricCards";
+import { FilterBar } from "./components/FilterBar";
+import { ConfirmModal } from "./components/ConfirmModal";
 
 function App() {
   const [statusFilter, setStatusFilter] = useState<VehicleStatus | "All">("All");
@@ -30,6 +33,7 @@ function App() {
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
   const [statusSuccess, setStatusSuccess] = useState<string | null>(null);
+  const [showResetModal, setShowResetModal] = useState(false);
 
   // Get vehicles based on search or filter
   let vehicles = searchQuery
@@ -109,81 +113,44 @@ function App() {
   };
 
   const handleResetData = () => {
-    if (confirm("Are you sure you want to reset all data? This will clear any changes you've made.")) {
-      resetData();
-      setSelectedVehicleId(null);
-      setSearchQuery("");
-      setStatusFilter("All");
-    }
+    resetData();
+    setSelectedVehicleId(null);
+    setSearchQuery("");
+    setStatusFilter("All");
+    setShowResetModal(false);
   };
 
   return (
     <div className="app">
       <header className="app-header">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div className="header-content">
           <div>
             <h1>🚚 Fleet Maintenance Tracker</h1>
             <p className="subtitle">
               Manage your fleet's health, track maintenance, and take action.
             </p>
           </div>
-          <button className="btn btn-secondary" onClick={handleResetData}>
+          <button className="btn btn-secondary" onClick={() => setShowResetModal(true)}>
             Reset Data
           </button>
         </div>
       </header>
 
       <main className="app-main">
-        {/* Metric Cards */}
-        <div className="metric-cards">
-          <div className="metric-card">
-            <div className="metric-label">Total Vehicles</div>
-            <div className="metric-value">{metrics.totalVehicles}</div>
-          </div>
-          <div className="metric-card">
-            <div className="metric-label">Active Vehicles</div>
-            <div className="metric-value">{metrics.activeVehicles}</div>
-          </div>
-          <div className="metric-card">
-            <div className="metric-label">Total Maintenance Cost</div>
-            <div className="metric-value">${metrics.totalMaintenanceCost.toLocaleString()}</div>
-          </div>
-        </div>
+        <MetricCards
+          totalVehicles={metrics.totalVehicles}
+          activeVehicles={metrics.activeVehicles}
+          totalMaintenanceCost={metrics.totalMaintenanceCost}
+        />
 
-        {/* Search and Filter Bar */}
-        <div className="filter-bar">
-          <input
-            type="text"
-            placeholder="Search by vehicle ID or driver name..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-          <label htmlFor="status-filter">Filter by Status:</label>
-          <select
-            id="status-filter"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as VehicleStatus | "All")}
-          >
-            <option value="All">All</option>
-            <option value="Active">Active</option>
-            <option value="Out of Service">Out of Service</option>
-            <option value="Retired">Retired</option>
-          </select>
-          <div style={{ marginLeft: "auto", display: "flex", gap: "8px" }}>
-            <button
-              className={`btn ${viewMode === "table" ? "btn-primary" : "btn-secondary"}`}
-              onClick={() => setViewMode("table")}
-            >
-              Table View
-            </button>
-            <button
-              className={`btn ${viewMode === "cards" ? "btn-primary" : "btn-secondary"}`}
-              onClick={() => setViewMode("cards")}
-            >
-              Card View
-            </button>
-          </div>
-        </div>
+        <FilterBar
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          statusFilter={statusFilter}
+          onStatusFilterChange={setStatusFilter}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+        />
 
         {/* Vehicle Health Cards View */}
         {viewMode === "cards" && (
@@ -230,12 +197,12 @@ function App() {
                     <td>{vehicle.year}</td>
                     <td>{vehicle.mileage.toLocaleString()} mi</td>
                     <td>
-                      {(() => {
+                      {useMemo(() => {
                         const days = getDaysSinceLastService(vehicle.vehicleId);
-                        if (days === null) return <span style={{ color: "#94a3b8" }}>N/A</span>;
-                        if (days > 90) return <span style={{ color: "#ef4444", fontWeight: 600 }}>{days} days ⚠️</span>;
+                        if (days === null) return <span className="days-na">N/A</span>;
+                        if (days > 90) return <span className="days-overdue">{days} days ⚠️</span>;
                         return <span>{days} days</span>;
-                      })()}
+                      }, [vehicle.vehicleId])}
                     </td>
                     <td>
                       <span
@@ -341,7 +308,7 @@ function App() {
 
                           {/* Maintenance Records */}
                           <div className="maintenance-section">
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <div className="maintenance-header">
                               <h3>Maintenance History</h3>
                               <button
                                 className="btn btn-primary"
@@ -453,6 +420,14 @@ function App() {
         </div>
         )}
       </main>
+
+      <ConfirmModal
+        isOpen={showResetModal}
+        title="Reset Data"
+        message="Are you sure you want to reset all data? This will clear any changes you've made."
+        onConfirm={handleResetData}
+        onCancel={() => setShowResetModal(false)}
+      />
     </div>
   );
 }
