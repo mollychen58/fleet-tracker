@@ -1,4 +1,4 @@
-import { Vehicle } from "../types";
+import { Vehicle } from "@/types";
 
 export const vehicles: Vehicle[] = [
   { vehicleId: "V-001", make: "Ford", model: "Transit", year: 2021, mileage: 48200, status: "Active", driverId: "D-001" },
@@ -11,6 +11,7 @@ export const vehicles: Vehicle[] = [
   { vehicleId: "V-008", make: "Ford", model: "Transit Connect", year: 2021, mileage: 54100, status: "Active", driverId: "D-008" },
   { vehicleId: "V-009", make: "Ram", model: "ProMaster City", year: 2022, mileage: 28900, status: "Active", driverId: "D-009" },
   { vehicleId: "V-010", make: "GMC", model: "Savana", year: 2017, mileage: 168200, status: "Retired", driverId: "D-010" },
+  { vehicleId: "V-019", make: "Ford", model: "E-Transit", year: 2026, mileage: 450, status: "Active", driverId: "D-002" },
   { vehicleId: "V-011", make: "Ford", model: "Transit", year: 2023, mileage: 8700, status: "Active", driverId: "D-011" },
   { vehicleId: "V-012", make: "Mercedes", model: "Metris", year: 2021, mileage: 43200, status: "Active", driverId: "D-012" },
   { vehicleId: "V-013", make: "Chevrolet", model: "Express", year: 2020, mileage: 91500, status: "Out of Service", driverId: "D-013" },

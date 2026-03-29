@@ -35,7 +35,9 @@ export interface Driver {
   /** Primary Key */
   driverId: string;
   fullName: string;
+  licenseNumber: string;
   licenseExpiry: string; // ISO date string (YYYY-MM-DD)
+  hireDate: string; // ISO date string (YYYY-MM-DD)
   phone: string;
 }
 

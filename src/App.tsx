@@ -7,14 +7,19 @@ import {
   getMaintenanceForVehicle,
   getDaysSinceLastService,
   scheduleMaintenance,
-  updateVehicleStatus
+  updateVehicleStatus,
+  searchVehicles,
+  resetData
 } from "./services/ontologyService";
 import { VehicleStatus } from "./types";
+import { VehicleHealthCard } from "./components/VehicleHealthCard";
 
 function App() {
   const [statusFilter, setStatusFilter] = useState<VehicleStatus | "All">("All");
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [showMaintenanceForm, setShowMaintenanceForm] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [viewMode, setViewMode] = useState<"table" | "cards">("table");
   const [formData, setFormData] = useState({
     serviceType: "",
     serviceDate: "",
@@ -25,11 +30,13 @@ function App() {
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
   const [statusSuccess, setStatusSuccess] = useState<string | null>(null);
-  const [refreshKey, setRefreshKey] = useState(0);
 
-  const vehicles = statusFilter === "All"
-    ? getVehicles()
-    : getVehicles({ status: statusFilter });
+  // Get vehicles based on search or filter
+  let vehicles = searchQuery
+    ? searchVehicles(searchQuery)
+    : statusFilter === "All"
+      ? getVehicles()
+      : getVehicles({ status: statusFilter });
 
   const metrics = getFleetMetrics();
 
@@ -77,7 +84,6 @@ function App() {
       setFormSuccess("Maintenance scheduled successfully!");
       setFormData({ serviceType: "", serviceDate: "", technicianName: "", notes: "" });
       setShowMaintenanceForm(false);
-      setRefreshKey(prev => prev + 1);
     } else {
       setFormError(result.error || "Failed to schedule maintenance");
     }
@@ -96,20 +102,35 @@ function App() {
 
     if (result.success) {
       setStatusSuccess("Vehicle status updated successfully!");
-      setRefreshKey(prev => prev + 1);
       setTimeout(() => setStatusSuccess(null), 3000);
     } else {
       setStatusError(result.error || "Failed to update status");
     }
   };
 
+  const handleResetData = () => {
+    if (confirm("Are you sure you want to reset all data? This will clear any changes you've made.")) {
+      resetData();
+      setSelectedVehicleId(null);
+      setSearchQuery("");
+      setStatusFilter("All");
+    }
+  };
+
   return (
     <div className="app">
       <header className="app-header">
-        <h1>🚚 Fleet Maintenance Tracker</h1>
-        <p className="subtitle">
-          Manage your fleet's health, track maintenance, and take action.
-        </p>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div>
+            <h1>🚚 Fleet Maintenance Tracker</h1>
+            <p className="subtitle">
+              Manage your fleet's health, track maintenance, and take action.
+            </p>
+          </div>
+          <button className="btn btn-secondary" onClick={handleResetData}>
+            Reset Data
+          </button>
+        </div>
       </header>
 
       <main className="app-main">
@@ -129,8 +150,14 @@ function App() {
           </div>
         </div>
 
-        {/* Filter Bar */}
+        {/* Search and Filter Bar */}
         <div className="filter-bar">
+          <input
+            type="text"
+            placeholder="Search by vehicle ID or driver name..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
           <label htmlFor="status-filter">Filter by Status:</label>
           <select
             id="status-filter"
@@ -142,9 +169,33 @@ function App() {
             <option value="Out of Service">Out of Service</option>
             <option value="Retired">Retired</option>
           </select>
+          <div style={{ marginLeft: "auto", display: "flex", gap: "8px" }}>
+            <button
+              className={`btn ${viewMode === "table" ? "btn-primary" : "btn-secondary"}`}
+              onClick={() => setViewMode("table")}
+            >
+              Table View
+            </button>
+            <button
+              className={`btn ${viewMode === "cards" ? "btn-primary" : "btn-secondary"}`}
+              onClick={() => setViewMode("cards")}
+            >
+              Card View
+            </button>
+          </div>
         </div>
 
+        {/* Vehicle Health Cards View */}
+        {viewMode === "cards" && (
+          <div className="health-cards-grid">
+            {vehicles.map((vehicle) => (
+              <VehicleHealthCard key={vehicle.vehicleId} vehicle={vehicle} />
+            ))}
+          </div>
+        )}
+
         {/* Vehicle Table */}
+        {viewMode === "table" && (
         <div className="vehicle-table-container">
           <table className="vehicle-table">
             <thead>
@@ -154,6 +205,7 @@ function App() {
                 <th>Model</th>
                 <th>Year</th>
                 <th>Mileage</th>
+                <th>Days Since Service</th>
                 <th>Status</th>
               </tr>
             </thead>
@@ -177,6 +229,14 @@ function App() {
                     <td>{vehicle.model}</td>
                     <td>{vehicle.year}</td>
                     <td>{vehicle.mileage.toLocaleString()} mi</td>
+                    <td>
+                      {(() => {
+                        const days = getDaysSinceLastService(vehicle.vehicleId);
+                        if (days === null) return <span style={{ color: "#94a3b8" }}>N/A</span>;
+                        if (days > 90) return <span style={{ color: "#ef4444", fontWeight: 600 }}>{days} days ⚠️</span>;
+                        return <span>{days} days</span>;
+                      })()}
+                    </td>
                     <td>
                       <span
                         className="status-badge"
@@ -391,6 +451,7 @@ function App() {
             </tbody>
           </table>
         </div>
+        )}
       </main>
     </div>
   );
