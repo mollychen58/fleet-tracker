@@ -1,0 +1,278 @@
+===============================================================================
+                    FLEET MAINTENANCE TRACKER ARCHITECTURE
+===============================================================================
+
++-----------------------------------------------------------------------------+
+|                         PRESENTATION LAYER (UI)                             |
++-----------------------------------------------------------------------------+
+|                                                                             |
+|  +-----------------------------------------------------------------------+  |
+|  |                          App.tsx (Main Component)                     |  |
+|  |                                                                       |  |
+|  |  State Management:                                                    |  |
+|  |  - searchQuery, statusFilter, selectedVehicleId                       |  |
+|  |  - viewMode (table/cards), showMaintenanceForm                        |  |
+|  |  - formData, formError, formSuccess                                   |  |
+|  |  - statusError, statusSuccess                                         |  |
+|  +-----------------------------------------------------------------------+  |
+|                                                                             |
+|  +--------------------------------+  +-----------------------------------+  |
+|  |         TABLE VIEW             |  |          CARD VIEW                |  |
+|  |--------------------------------|  |-----------------------------------|  |
+|  | - Metric Cards (3 cards)       |  | - Grid Layout                     |  |
+|  | - Search Bar                   |  | - VehicleHealthCard components    |  |
+|  | - Status Filter Dropdown       |  | - Responsive grid                 |  |
+|  | - Vehicle Table                |  |                                   |  |
+|  |   * ID, Make, Model, Year      |  |                                   |  |
+|  |   * Mileage, Days Since        |  |                                   |  |
+|  |   * Service, Status            |  |                                   |  |
+|  |                                |  |                                   |  |
+|  | - Inline Detail Panel          |  |                                   |  |
+|  |   * Vehicle Info Grid          |  |                                   |  |
+|  |   * Status Update Dropdown     |  |                                   |  |
+|  |   * Assigned Driver Section    |  |                                   |  |
+|  |   * Maintenance History Table  |  |                                   |  |
+|  |   * Schedule Maintenance Form  |  |                                   |  |
+|  +--------------------------------+  +-----------------------------------+  |
+|                                                                             |
+|  +-----------------------------------------------------------------------+  |
+|  |            VehicleHealthCard.tsx (Reusable Component)                 |  |
+|  |                                                                       |  |
+|  |  Props: Vehicle                                                       |  |
+|  |  Displays:                                                            |  |
+|  |  - Health badge (Healthy/Needs Service/Out of Service/Retired)        |  |
+|  |  - Vehicle details (year, make, model, mileage)                       |  |
+|  |  - Status badge (color-coded)                                         |  |
+|  |  - Days since last service (with warning if > 90 days)                |  |
+|  +-----------------------------------------------------------------------+  |
+|                                                                             |
++-----------------------------------+-----------------------------------------+
+                                    |
+                                    | Function Calls
+                                    |
++-----------------------------------v-----------------------------------------+
+|                           SERVICE LAYER (Business Logic)                    |
++-----------------------------------------------------------------------------+
+|                                                                             |
+|  +-----------------------------------------------------------------------+  |
+|  |              ontologyService.ts (Data Access & Validation)            |  |
+|  +-----------------------------------------------------------------------+  |
+|                                                                             |
+|  QUERY OPERATIONS (Read)                                                    |
+|  ===========================                                                |
+|  getVehicles(filters?)           -> Vehicle[]                               |
+|  getVehicleById(id)              -> Vehicle | undefined                     |
+|  searchVehicles(query)           -> Vehicle[]                               |
+|  getDriverForVehicle(vehicleId)  -> Driver | undefined                      |
+|  getMaintenanceForVehicle(id)    -> MaintenanceRecord[]                     |
+|  getFleetMetrics()               -> Metrics object                          |
+|  getDaysSinceLastService(id)     -> number | null                           |
+|                                                                             |
+|  MUTATION OPERATIONS (Write)                                                |
+|  ============================                                               |
+|  scheduleMaintenance(params)     -> {success: boolean, error?: string}      |
+|  updateVehicleStatus(params)     -> {success: boolean, error?: string}      |
+|  resetData()                     -> void                                    |
+|                                                                             |
+|  VALIDATION RULES                                                           |
+|  =================                                                          |
+|  - Service date must be in future                                           |
+|  - Cannot schedule for retired vehicles                                     |
+|  - Cannot reactivate retired vehicles                                       |
+|  - Days Since Service only counts past dates                                |
+|                                                                             |
++-----------------------------------+-----------------------------------------+
+                                    |
+                                    | Accesses In-Memory Stores
+                                    |
++-----------------------------------v-----------------------------------------+
+|                           DATA LAYER (Mock Database)                        |
++-----------------------------------------------------------------------------+
+|                                                                             |
+|  +-----------------------+  +----------------------+  +-------------------+ |
+|  |    vehicles.ts        |  | maintenanceRecords   |  |    drivers.ts     | |
+|  |                       |  |        .ts           |  |                   | |
+|  | let vehicleStore:     |  | let maintenanceStore:|  | const driverStore:| |
+|  | Vehicle[]             |  | MaintenanceRecord[]  |  | Driver[]          | |
+|  |                       |  |                      |  |                   | |
+|  | Fields:               |  | Fields:              |  | Fields:           | |
+|  | - vehicleId (PK)      |  | - recordId (PK)      |  | - driverId (PK)   | |
+|  | - make                |  | - vehicleId (FK)     |  | - fullName        | |
+|  | - model               |  | - serviceType        |  | - licenseNumber   | |
+|  | - year                |  | - serviceDate        |  | - licenseExpiry   | |
+|  | - mileage             |  | - cost               |  | - hireDate        | |
+|  | - status              |  | - technicianName     |  | - phone           | |
+|  | - driverId (FK)       |  | - notes              |  |                   | |
+|  |                       |  |                      |  | Validation:       | |
+|  | Count: 19 vehicles    |  | Count: 27 records    |  | hireDate <= today | |
+|  | (Mutable)             |  | (Mutable)            |  | (Validated)       | |
+|  +-----------------------+  +----------------------+  +-------------------+ |
+|                                                                             |
+|  RELATIONSHIPS:                                                             |
+|  Vehicle (1) -----> (1) Driver         [Many-to-One via driverId]           |
+|  Vehicle (1) -----> (*) MaintenanceRecord  [One-to-Many via vehicleId]      |
+|                                                                             |
++-----------------------------------------------------------------------------+
+
+
++-----------------------------------------------------------------------------+
+|                       TYPE DEFINITIONS LAYER                                |
++-----------------------------------------------------------------------------+
+|                                                                             |
+|  +-----------------------------------------------------------------------+  |
+|  |                        types/index.ts                                 |  |
+|  +-----------------------------------------------------------------------+  |
+|                                                                             |
+|  OBJECT TYPES (Ontology Entities)                                           |
+|  ==================================                                         |
+|  interface Vehicle                                                          |
+|  interface MaintenanceRecord                                                |
+|  interface Driver                                                           |
+|  type VehicleStatus = "Active" | "Out of Service" | "Retired"               |
+|                                                                             |
+|  ACTION PARAMETER TYPES (Mutation Inputs)                                   |
+|  ==========================================                                 |
+|  interface ScheduleMaintenanceParams                                        |
+|  interface UpdateVehicleStatusParams                                        |
+|                                                                             |
++-----------------------------------------------------------------------------+
+
+
++-----------------------------------------------------------------------------+
+|                           STYLING LAYER (CSS)                               |
++-----------------------------------------------------------------------------+
+|                                                                             |
+|  +-----------------------------------------------------------------------+  |
+|  |                            App.css                                    |  |
+|  +-----------------------------------------------------------------------+  |
+|                                                                             |
+|  COMPONENT STYLES                    | UTILITY STYLES                       |
+|  ====================================|===================================   |
+|  .metric-cards, .metric-card        | .btn, .btn-primary, .btn-secondary    |
+|  .metric-label, .metric-value       | .warning, .error-message              |
+|  .vehicle-table-container           | .success-message                      |
+|  .vehicle-table                     | .filter-bar                           |
+|  .status-badge                      | .action-section                       |
+|  .detail-panel, .detail-panel-inline| .action-form, .form-group             |
+|  .detail-grid, .detail-item         |                                       |
+|  .vehicle-health-card               | STATE STYLES                          |
+|  .health-cards-grid                 | ======================================|
+|  .health-badge                      | .selected (blue highlight)            |
+|  .maintenance-section               | .no-service-row (gray background)     |
+|                                     | :hover (lighter background)           |
+|                                                                             |
++-----------------------------------------------------------------------------+
+
+
+===============================================================================
+                              DATA FLOW DIAGRAM
+===============================================================================
+
+READ FLOW (Query Operations)
+=============================
+
+User Action (Click/Search/Filter)
+        |
+        v
+Component State Update (useState)
+        |
+        v
+Service Layer Function Call
+        |
+        v
+Data Layer Access (In-Memory Store)
+        |
+        v
+Return Data
+        |
+        v
+Component Re-render
+        |
+        v
+Updated UI Displayed to User
+
+
+WRITE FLOW (Mutation Operations)
+=================================
+
+User Action (Form Submit/Status Change)
+        |
+        v
+Event Handler Triggered
+        |
+        v
+Service Layer Mutation Function
+        |
+        v
+Validation (Business Rules)
+        |
+        +---> [FAIL] Return {success: false, error: "..."}
+        |                   |
+        |                   v
+        |             Display Error Message
+        |
+        +---> [PASS] Update In-Memory Store
+                      |
+                      v
+                Return {success: true}
+                      |
+                      v
+                Set Success State
+                      |
+                      v
+                Component Re-render
+                      |
+                      v
+                Display Success Message + Updated Data
+
+
+===============================================================================
+                            KEY USER INTERACTIONS
+===============================================================================
+
+1. SEARCH & FILTER
+   User Input --> searchVehicles(query) / getVehicles(filter) --> Results
+
+2. SELECT VEHICLE
+   Row Click --> Set selectedVehicleId --> Load Detail Data --> Show Panel
+
+3. SCHEDULE MAINTENANCE
+   Form Submit --> scheduleMaintenance() --> Validate --> Create Record
+
+4. UPDATE STATUS
+   Dropdown Change --> updateVehicleStatus() --> Validate --> Update Vehicle
+
+5. RESET DATA
+   Button Click --> resetData() --> Clear Stores --> Reset UI State
+
+6. TOGGLE VIEW
+   Button Click --> Set viewMode --> Render Table or Cards
+
+
+===============================================================================
+                            TECHNICAL STACK
+===============================================================================
+
+Frontend Framework:     React 18.3.1
+Language:               TypeScript 5.9.3
+Build Tool:             Vite 7.1.11
+Styling:                Pure CSS (no framework)
+State Management:       React useState hooks (no external library)
+Type Safety:            Full TypeScript coverage
+Module System:          ES Modules
+
+
+===============================================================================
+                            PROJECT STATISTICS
+===============================================================================
+
+Total Components:       2 (App, VehicleHealthCard)
+Total Services:         1 (ontologyService)
+Total Data Files:       3 (vehicles, drivers, maintenanceRecords)
+Total Vehicles:         19
+Total Drivers:          15
+Total Maintenance:      27 records
+Lines of Code:          ~1,500+ (excluding node_modules)
+
+
+===============================================================================
