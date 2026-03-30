@@ -243,7 +243,7 @@ function App() {
                   {/* Detail Panel Row - appears right after clicked row */}
                   {selectedVehicleId === vehicle.vehicleId && selectedVehicle && (
                     <tr className="detail-row">
-                      <td colSpan={6}>
+                      <td colSpan={7}>
                         <div className="detail-panel-inline">
                           <h2>Vehicle Details: {selectedVehicle.vehicleId}</h2>
 
