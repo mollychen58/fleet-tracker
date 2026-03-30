@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "./App.css";
 import {
   getVehicles,
@@ -42,7 +42,22 @@ function App() {
       ? getVehicles()
       : getVehicles({ status: statusFilter });
 
+  // Apply status filter to search results as well
+  if (searchQuery && statusFilter !== "All") {
+    vehicles = vehicles.filter(v => v.status === statusFilter);
+  }
+
   const metrics = getFleetMetrics();
+
+  // Clear selection if selected vehicle is no longer in the filtered list
+  useEffect(() => {
+    if (selectedVehicleId) {
+      const vehicleExists = vehicles.find(v => v.vehicleId === selectedVehicleId);
+      if (!vehicleExists) {
+        setSelectedVehicleId(null);
+      }
+    }
+  }, [vehicles, selectedVehicleId]);
 
   const selectedVehicle = selectedVehicleId
     ? vehicles.find(v => v.vehicleId === selectedVehicleId)
@@ -154,30 +169,41 @@ function App() {
 
         {/* Vehicle Health Cards View */}
         {viewMode === "cards" && (
-          <div className="health-cards-grid">
-            {vehicles.map((vehicle) => (
-              <VehicleHealthCard key={vehicle.vehicleId} vehicle={vehicle} />
-            ))}
-          </div>
+          vehicles.length === 0 ? (
+            <div className="empty-state">
+              <p>No vehicles found matching your criteria.</p>
+            </div>
+          ) : (
+            <div className="health-cards-grid">
+              {vehicles.map((vehicle) => (
+                <VehicleHealthCard key={vehicle.vehicleId} vehicle={vehicle} />
+              ))}
+            </div>
+          )
         )}
 
         {/* Vehicle Table */}
         {viewMode === "table" && (
-        <div className="vehicle-table-container">
-          <table className="vehicle-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Make</th>
-                <th>Model</th>
-                <th>Year</th>
-                <th>Mileage</th>
-                <th>Days Since Service</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {vehicles.map((vehicle) => (
+          vehicles.length === 0 ? (
+            <div className="empty-state">
+              <p>No vehicles found matching your criteria.</p>
+            </div>
+          ) : (
+            <div className="vehicle-table-container">
+              <table className="vehicle-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Make</th>
+                    <th>Model</th>
+                    <th>Year</th>
+                    <th>Mileage</th>
+                    <th>Days Since Service</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {vehicles.map((vehicle) => (
                 <>
                   <tr
                     key={vehicle.vehicleId}
@@ -414,10 +440,11 @@ function App() {
                     </tr>
                   )}
                 </>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
         )}
       </main>
 
